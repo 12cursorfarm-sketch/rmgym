@@ -61,7 +61,13 @@ export default function ScannerPage() {
             { facingMode: "environment" },
             {
               fps: 10,
-              aspectRatio: 1.0, // Or whatever fits best
+              qrbox: (viewfinderWidth, viewfinderHeight) => {
+                const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                return {
+                  width: Math.max(250, Math.floor(minEdge * 0.85)),
+                  height: Math.max(250, Math.floor(minEdge * 0.85))
+                };
+              }
             },
             (decodedText) => {
               if (processing) return
