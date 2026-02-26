@@ -61,7 +61,7 @@ export default function ScannerPage() {
             { facingMode: "environment" },
             {
               fps: 10,
-              qrbox: { width: 250, height: 250 },
+              aspectRatio: 1.0, // Or whatever fits best
             },
             (decodedText) => {
               if (processing) return
@@ -257,8 +257,8 @@ export default function ScannerPage() {
                 </button>
               </div>
             ) : (
-              <div style={{ position: 'relative' }}>
-                <div id="reader" style={{ width: '100%', borderRadius: 12, overflow: 'hidden', background: '#000' }}></div>
+              <div style={{ position: 'relative', width: '100%', minHeight: '60vh', display: 'flex', flexDirection: 'column' }}>
+                <div id="reader" style={{ flexGrow: 1, width: '100%', borderRadius: 12, overflow: 'hidden', background: '#000' }}></div>
                 <div style={{ padding: 16, textAlign: 'center' }}>
                   <button className="btn btn-danger" onClick={() => { void stopCamera() }} style={{ width: '100%' }}>
                     Stop Scanner
