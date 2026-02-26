@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { Html5Qrcode } from 'html5-qrcode'
 import { supabase } from '@/lib/supabase'
 import {
   getMembershipLabel,
@@ -11,10 +12,7 @@ import {
 import type { Member, CheckInResult } from '@/lib/utils'
 
 export default function ScannerPage() {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const scannerRef = useRef<Html5Qrcode | null>(null)
   const lastScannedRef = useRef<string>('')
   const lastScannedTimeRef = useRef<number>(0)
 
@@ -28,14 +26,15 @@ export default function ScannerPage() {
   } | null>(null)
   const [processing, setProcessing] = useState(false)
 
-  const stopCamera = useCallback(() => {
-    if (scanIntervalRef.current) {
-      clearInterval(scanIntervalRef.current)
-      scanIntervalRef.current = null
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop())
-      streamRef.current = null
+  const stopCamera = useCallback(async () => {
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.stop()
+        scannerRef.current.clear()
+      } catch (err) {
+        // ignore errors on stop
+      }
+      scannerRef.current = null
     }
     setScanning(false)
   }, [])
@@ -49,58 +48,45 @@ export default function ScannerPage() {
   async function startCamera() {
     try {
       setCameraError(null)
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
+      // We must set scanning to true so the #reader div mounts
       setScanning(true)
-      startScanning()
+
+      // Allow nominal time for React to render the div
+      setTimeout(async () => {
+        try {
+          const html5QrCode = new Html5Qrcode("reader")
+          scannerRef.current = html5QrCode
+
+          await html5QrCode.start(
+            { facingMode: "environment" },
+            {
+              fps: 10,
+              qrbox: { width: 250, height: 250 },
+            },
+            (decodedText) => {
+              if (processing) return
+              const now = Date.now()
+              if (decodedText === lastScannedRef.current && now - lastScannedTimeRef.current < 5000) {
+                return
+              }
+              lastScannedRef.current = decodedText
+              lastScannedTimeRef.current = now
+              handleScan(decodedText)
+            },
+            () => {
+              // ignore parse errors
+            }
+          )
+        } catch (err) {
+          console.error('Camera error:', err)
+          setCameraError('Failed to access camera. Please allow permissions.')
+          setScanning(false)
+        }
+      }, 100)
     } catch (err) {
       console.error('Camera error:', err)
-      setCameraError('Failed to access camera. Please allow camera permissions and try again.')
-    }
-  }
-
-  function startScanning() {
-    // Use BarcodeDetector API if available, otherwise fall back to manual input
-    if ('BarcodeDetector' in window) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] })
-      scanIntervalRef.current = setInterval(async () => {
-        if (!videoRef.current || !canvasRef.current || processing) return
-        const video = videoRef.current
-        const canvas = canvasRef.current
-        const ctx = canvas.getContext('2d')
-        if (!ctx || video.videoWidth === 0) return
-
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-        ctx.drawImage(video, 0, 0)
-
-        try {
-          const barcodes = await detector.detect(canvas)
-          if (barcodes.length > 0) {
-            const value = barcodes[0].rawValue
-            const now = Date.now()
-            // Prevent duplicate scans of the same QR within 5 seconds
-            if (value === lastScannedRef.current && now - lastScannedTimeRef.current < 5000) {
-              return
-            }
-            lastScannedRef.current = value
-            lastScannedTimeRef.current = now
-            handleScan(value)
-          }
-        } catch {
-          // Ignore detection errors
-        }
-      }, 500)
-    } else {
-      // BarcodeDetector not available - show manual input
-      setCameraError('QR scanning via camera is not supported in this browser. Use the manual input below, or try Chrome on Android.')
+      setCameraError('Failed to start camera.')
+      setScanning(false)
     }
   }
 
@@ -262,40 +248,9 @@ export default function ScannerPage() {
               </div>
             ) : (
               <div style={{ position: 'relative' }}>
-                <video
-                  ref={videoRef}
-                  style={{
-                    width: '100%',
-                    borderRadius: 12,
-                    display: 'block',
-                  }}
-                  playsInline
-                  muted
-                />
-                {/* Scanning overlay */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    pointerEvents: 'none',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 200,
-                      height: 200,
-                      border: '2px solid var(--accent)',
-                      borderRadius: 16,
-                      boxShadow: '0 0 0 9999px rgba(0,0,0,0.3)',
-                    }}
-                  />
-                </div>
-                <canvas ref={canvasRef} style={{ display: 'none' }} />
+                <div id="reader" style={{ width: '100%', borderRadius: 12, overflow: 'hidden', background: '#000' }}></div>
                 <div style={{ padding: 16, textAlign: 'center' }}>
-                  <button className="btn btn-danger" onClick={stopCamera} style={{ width: '100%' }}>
+                  <button className="btn btn-danger" onClick={() => { void stopCamera() }} style={{ width: '100%' }}>
                     Stop Scanner
                   </button>
                 </div>
