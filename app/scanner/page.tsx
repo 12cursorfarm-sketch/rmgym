@@ -196,6 +196,16 @@ export default function ScannerPage() {
   // Manual ID input for browsers without BarcodeDetector
   const [manualId, setManualId] = useState('')
 
+  useEffect(() => {
+    if (result) {
+      const timer = setTimeout(() => {
+        setResult(null)
+        setManualId('')
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [result])
+
   function handleManualScan() {
     if (!manualId.trim()) return
     handleScan(manualId.trim())
@@ -224,7 +234,7 @@ export default function ScannerPage() {
         <p className="page-subtitle">Scan member QR code for check-in</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: result?.member ? '1fr 1fr' : '1fr', gap: 24, maxWidth: 900 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 24, maxWidth: 640, margin: '0 auto' }}>
         {/* Scanner */}
         <div>
           <div className="card" style={{ overflow: 'hidden' }}>
@@ -290,10 +300,41 @@ export default function ScannerPage() {
           </div>
         </div>
 
-        {/* Result Display */}
+        {/* Result Display Modal */}
         {result && (
-          <div className={`scan-result ${result.status}`}>
-            {/* Status Icon */}
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 24,
+            }}
+            onClick={() => {
+              setResult(null)
+              setManualId('')
+            }}
+          >
+            <div
+              className={`scan-result ${result.status}`}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '100%',
+                maxWidth: 480,
+                margin: 0,
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              }}
+            >
+              {/* Status Icon */}
             <div
               style={{
                 width: 72,
@@ -443,10 +484,11 @@ export default function ScannerPage() {
                 setResult(null)
                 setManualId('')
               }}
-              style={{ marginTop: 20, width: '100%' }}
+              style={{ marginTop: 24, width: '100%' }}
             >
-              Clear & Scan Next
+              Close
             </button>
+            </div>
           </div>
         )}
       </div>
