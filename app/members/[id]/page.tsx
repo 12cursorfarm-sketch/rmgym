@@ -8,6 +8,7 @@ import {
   getMembershipDays,
   getEffectiveStatus,
   formatDate,
+  getTodayStr,
 } from '@/lib/utils'
 import type { Member, Attendance } from '@/lib/utils'
 import QRCode from 'qrcode'
@@ -26,6 +27,7 @@ export default function MemberProfilePage({
   const [showQR, setShowQR] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [renewing, setRenewing] = useState(false)
+  const [checkingIn, setCheckingIn] = useState(false)
 
   useEffect(() => {
     loadMember()
@@ -53,6 +55,44 @@ export default function MemberProfilePage({
       console.error('Error loading member:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleCheckIn() {
+    if (!member) return
+    setCheckingIn(true)
+    try {
+      if (getEffectiveStatus(member) !== 'active') {
+        alert('Cannot check in: Membership is not active.')
+        return
+      }
+
+      const today = getTodayStr()
+      const { data: existing } = await supabase
+        .from('attendance')
+        .select('id')
+        .eq('member_id', member.id)
+        .eq('date', today)
+        .single()
+        
+      if (existing) {
+        alert('Already checked in today.')
+        return
+      }
+
+      const { error } = await supabase.from('attendance').insert({
+        member_id: member.id,
+        date: today,
+      })
+      if (error) throw error
+      
+      alert('Check-in successful!')
+      loadMember()
+    } catch (err) {
+      console.error('Error checking in:', err)
+      alert('Failed to check in.')
+    } finally {
+      setCheckingIn(false)
     }
   }
 
@@ -172,10 +212,34 @@ export default function MemberProfilePage({
             {member.name}
           </h2>
           {member.email && (
-            <p style={{ color: 'var(--muted)', fontSize: 14, margin: '0 0 16px' }}>
+            <p style={{ color: 'var(--muted)', fontSize: 14, margin: '0 0 8px' }}>
               {member.email}
             </p>
           )}
+
+          <div style={{ 
+            fontSize: 12, 
+            color: 'var(--muted)', 
+            background: 'var(--surface-hover)', 
+            padding: '4px 8px', 
+            borderRadius: 6, 
+            marginBottom: 24,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6
+          }}>
+            <span style={{ userSelect: 'all', fontFamily: 'monospace' }}>{member.id}</span>
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText(member.id);
+                alert('ID copied to clipboard');
+              }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--accent)', display: 'flex' }}
+              title="Copy ID"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+          </div>
 
           <span className={`badge badge-${status}`} style={{ marginBottom: 24 }}>
             {status}
@@ -215,6 +279,13 @@ export default function MemberProfilePage({
           <div className="card" style={{ marginBottom: 24 }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, marginTop: 0 }}>Actions</h3>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <button
+                className="btn btn-primary"
+                onClick={handleCheckIn}
+                disabled={checkingIn}
+              >
+                {checkingIn ? 'Checking in...' : 'Check In'}
+              </button>
               <button
                 className="btn btn-success"
                 onClick={handleRenew}

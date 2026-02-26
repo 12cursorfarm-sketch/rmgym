@@ -207,7 +207,8 @@ export default function DashboardPage() {
                   borderRadius: 8,
                   color: 'var(--foreground)',
                 }}
-                formatter={(value: number) => [`P${value.toLocaleString()}`, 'Revenue']}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                formatter={(value: any) => [`P${Number(value).toLocaleString()}`, 'Revenue']}
               />
               <Bar dataKey="count" fill="var(--success)" radius={[6, 6, 0, 0]} name="Revenue" />
             </BarChart>
