@@ -117,6 +117,16 @@ export default function MemberProfilePage({
         .eq('id', member.id)
 
       if (error) throw error
+
+      // Record the renewal history
+      await supabase.from('renewals').insert({
+        member_id: member.id,
+        amount: member.payment,
+        membership_type: member.membership_type,
+        before_end_date: currentEnd.toISOString().split('T')[0],
+        after_end_date: newEndDate,
+      })
+
       setMember({ ...member, end_date: newEndDate, status: 'active' })
     } catch (err) {
       console.error('Error renewing:', err)

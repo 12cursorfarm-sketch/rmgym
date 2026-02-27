@@ -228,6 +228,35 @@ body {
   letter-spacing: 0.5px;
 }
 
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 24px;
+  overflow-x: auto;
+  padding-bottom: 1px;
+}
+.tab {
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.tab:hover {
+  color: var(--foreground);
+}
+.tab.active {
+  color: var(--foreground);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+
 /* Sidebar */
 .sidebar {
   width: 260px;

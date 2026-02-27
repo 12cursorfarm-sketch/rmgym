@@ -21,6 +21,16 @@ export interface Attendance {
   check_in_time: string
 }
 
+export interface Renewal {
+  id: string
+  member_id: string
+  amount: number
+  membership_type: MembershipType
+  before_end_date: string
+  after_end_date: string
+  created_at: string
+}
+
 export type CheckInResult = 'valid' | 'already_used' | 'expired' | 'suspended' | 'not_found'
 
 export function getMembershipLabel(type: MembershipType): string {
