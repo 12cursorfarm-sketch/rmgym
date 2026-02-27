@@ -89,10 +89,6 @@ export default function DashboardPage() {
     .filter((m) => m.created_at.startsWith(today))
     .reduce((sum, m) => sum + Number(m.payment), 0)
 
-  const walkinCount = members.filter(
-    (m) => m.membership_type === '1day' && m.created_at.startsWith(today)
-  ).length
-
   // Monthly revenue: members created this month
   const currentMonth = today.substring(0, 7)
   const monthlyRevenue = members
@@ -146,12 +142,7 @@ export default function DashboardPage() {
           <div className="stat-value">
             P{todayRevenue.toLocaleString()}
           </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Walk-in Count</div>
-          <div className="stat-value">{walkinCount}</div>
-        </div>
-        <div className="stat-card">
+
           <div className="stat-label">Monthly Revenue</div>
           <div className="stat-value" style={{ color: 'var(--success)' }}>
             P{monthlyRevenue.toLocaleString()}
